@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gateway | Secure Token Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+
+/* ── TOKENS ── */
+:root{
+  --bg:#08080d;
+  --s1:#0e0e16;
+  --s2:#14141f;
+  --s3:#1b1b2a;
+  --border:rgba(255,255,255,0.055);
+  --border2:rgba(255,255,255,0.11);
+  --border3:rgba(255,255,255,0.18);
+  --gold:#d4a843;
+  --gold2:#e8c56a;
+  --gold-dim:rgba(212,168,67,0.12);
+  --gold-glow:rgba(212,168,67,0.22);
+  --teal:#2fd4b4;
+  --teal-dim:rgba(47,212,180,0.1);
+  --red:#e85555;
+  --red-dim:rgba(232,85,85,0.1);
+  --amber:#f59e0b;
+  --text:#f2ede4;
+  --muted:rgba(242,237,228,0.45);
+  --dim:rgba(242,237,228,0.22);
+  --mono:'Space Mono',monospace;
+  --serif:'Instrument Serif',serif;
+  --sans:'DM Sans',sans-serif;
+  --r:12px;
+  --r2:8px;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:2rem 1rem 4rem;
+}
+
+/* subtle grid */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(212,168,67,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(212,168,67,0.025) 1px,transparent 1px);
+  background-size:56px 56px;
+  pointer-events:none;
+  z-index:0;
+}
+/* radial blobs */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 55% 35% at 15% 5%, rgba(212,168,67,0.07) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 25% at 85% 90%, rgba(47,212,180,0.05) 0%,transparent 55%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:460px;display:flex;flex-direction:column;gap:12px;}
+.hidden{display:none!important;}
+
+/* ── CARDS ── */
+.card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1.25rem 1.4rem;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(212,168,67,0.18),transparent);
+}
+.clabel{
+  font-size:10px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:0.8rem;
+  display:flex;align-items:center;gap:8px;
+}
+
+/* ── HEADER ── */
+.page-header{padding:0.5rem 0 0.75rem;display:flex;align-items:flex-end;justify-content:space-between;}
+.page-header h1{
+  font-family:var(--serif);
+  font-size:34px;
+  font-style:italic;
+  font-weight:400;
+  line-height:1;
+  color:var(--text);
+  letter-spacing:-0.5px;
+}
+.page-header .sub{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--gold);
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  margin-bottom:5px;
+}
+.hdr-right{text-align:right;}
+.hdr-user{font-family:var(--mono);font-size:12px;color:var(--teal);display:block;margin-bottom:6px;}
+
+/* ── BUTTONS ── */
+button{
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:9px 16px;border-radius:var(--r2);
+  cursor:pointer;border:1px solid var(--border2);
+  background:var(--s2);color:var(--muted);
+  transition:all 0.15s;white-space:nowrap;
+}
+button:hover{background:var(--s3);color:var(--text);border-color:var(--border3);}
+button:active{transform:scale(0.97);}
+button:disabled{opacity:0.28;cursor:not-allowed;transform:none;}
+button.primary{
+  background:var(--gold);color:#0a0800;border-color:var(--gold);
+  font-weight:600;flex:1;
+}
+button.primary:hover{background:var(--gold2);border-color:var(--gold2);}
+button.ghost{background:transparent;border-color:var(--border2);color:var(--muted);}
+.btn-row{display:flex;gap:8px;margin-top:4px;}
+
+/* ── INPUTS ── */
+input{
+  font-family:var(--mono);font-size:13px;
+  padding:10px 13px;
+  background:var(--bg);border:1px solid var(--border2);
+  border-radius:var(--r2);color:var(--text);
+  outline:none;transition:border-color 0.2s,box-shadow 0.2s;
+  width:100%;
+}
+input::placeholder{color:var(--dim);font-family:var(--sans);font-size:13px;letter-spacing:0;}
+input:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim);}
+input[type=password]{letter-spacing:3px;}
+.input-wrap{display:flex;gap:8px;margin-top:0.5rem;}
+.input-wrap input{flex:1;}
+.form-field{margin-bottom:14px;}
+.form-label{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;}
+
+/* ── FEEDBACK ── */
+.fb{font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;min-height:18px;margin-top:10px;transition:all 0.2s;}
+.fb.ok{color:var(--teal);}
+.fb.err{color:var(--red);}
+
+/* ── LOGIN ── */
+#loginWrap{align-self:center;align-items:center;}
+.auth-card{width:100%;max-width:370px;}
+.auth-header{text-align:center;padding:0.5rem 0 1.4rem;}
+.auth-logo{
+  width:48px;height:48px;border-radius:14px;
+  background:var(--gold-dim);border:1px solid rgba(212,168,67,0.25);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin:0 auto 14px;
+}
+.auth-header h2{font-family:var(--serif);font-size:28px;font-style:italic;color:var(--text);margin-bottom:2px;}
+.auth-header p{font-size:12px;color:var(--muted);}
+.auth-foot{margin-top:1.2rem;text-align:center;font-size:12px;color:var(--dim);}
+.auth-foot span{color:var(--gold2);cursor:pointer;font-weight:600;}
+.auth-foot span:hover{text-decoration:underline;}
+.divider{height:1px;background:var(--border);margin:1rem 0;}
+.forgot-link{font-size:11px;color:var(--dim);cursor:pointer;text-align:right;display:block;margin-top:-8px;margin-bottom:14px;}
+.forgot-link:hover{color:var(--muted);}
+.otp-input{text-align:center;font-size:26px;letter-spacing:8px;font-family:var(--mono);}
+
+/* ── WALLET ── */
+.wallet-card{background:var(--s2);border-color:rgba(212,168,67,0.15);}
+.wallet-inner{display:flex;align-items:center;justify-content:space-between;}
+.balance-num{
+  font-family:var(--mono);font-size:40px;font-weight:700;
+  color:var(--text);line-height:1;
+  transition:transform 0.3s cubic-bezier(.34,1.6,.64,1),color 0.3s;
+  display:inline-block;
+}
+.balance-num.pop{transform:scale(1.1);color:var(--gold);}
+.balance-badge{
+  font-size:11px;font-weight:700;font-family:var(--mono);
+  background:var(--teal-dim);color:var(--teal);
+  border:1px solid rgba(47,212,180,0.2);
+  border-radius:99px;padding:3px 10px;
+  opacity:0;transform:translateY(5px);
+  transition:all 0.3s;display:inline-block;margin-left:8px;
+}
+.balance-badge.show{opacity:1;transform:translateY(0);}
+.wallet-sub{font-size:12px;color:var(--muted);margin-top:6px;}
+.wallet-icon{
+  width:46px;height:46px;border-radius:12px;
+  background:var(--gold-dim);border:1px solid rgba(212,168,67,0.2);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+
+/* ── CODE GEN ── */
+.code-display{
+  background:var(--bg);border:1px solid var(--border2);
+  border-radius:var(--r2);padding:14px 16px;
+  margin:0.5rem 0 1rem;min-height:54px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.code-val{
+  font-family:var(--mono);font-size:20px;font-weight:700;
+  letter-spacing:4px;color:var(--gold2);word-break:break-all;
+  transition:color 0.3s;
+}
+.code-val.empty{font-size:13px;font-weight:400;color:var(--dim);letter-spacing:0;font-family:var(--sans);}
+.code-val.expired{color:var(--red);}
+
+/* timer */
+.timer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.timer-num{font-family:var(--mono);font-size:13px;color:var(--muted);}
+.timer-lbl{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);}
+.bar-track{height:2px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden;margin-bottom:1rem;}
+.bar-fill{height:100%;width:0%;border-radius:99px;background:var(--gold);transition:width 1s linear,background 0.5s;}
+.bar-fill.warn{background:var(--amber);}
+.bar-fill.danger{background:var(--red);}
+
+/* dots */
+.dot{width:7px;height:7px;border-radius:50%;background:var(--border2);display:inline-block;margin-right:6px;vertical-align:middle;transition:all 0.3s;}
+.dot.on{background:var(--teal);box-shadow:0 0 8px rgba(47,212,180,0.5);}
+.dot.off{background:var(--red);}
+
+/* ── HISTORY ── */
+.tx-list{display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto;}
+.tx-list::-webkit-scrollbar{width:4px;}
+.tx-list::-webkit-scrollbar-track{background:transparent;}
+.tx-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
+.tx-empty{font-size:13px;color:var(--dim);}
+.tx-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px;background:var(--bg);
+  border:1px solid var(--border);border-radius:var(--r2);
+  animation:slidein 0.22s ease;
+}
+@keyframes slidein{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+.tx-name{font-size:13px;font-weight:500;color:var(--text);}
+.tx-code{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:2px;margin-top:2px;}
+.tx-amt{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--teal);text-align:right;}
+.tx-time{font-size:10px;color:var(--dim);margin-top:2px;font-family:var(--mono);}
+.tx-badge{
+  font-size:10px;font-family:var(--mono);
+  padding:2px 8px;border-radius:99px;
+  background:var(--gold-dim);color:var(--gold2);
+  display:inline-block;margin-left:8px;
+  vertical-align:middle;border:1px solid rgba(212,168,67,0.2);
+}
+.count-pill{
+  font-family:var(--mono);font-size:10px;
+  background:var(--gold-dim);color:var(--gold2);
+  border:1px solid rgba(212,168,67,0.2);
+  padding:2px 8px;border-radius:99px;
+}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--s2);border:1px solid var(--gold);
+  color:var(--gold2);padding:10px 18px;
+  border-radius:var(--r2);font-size:12px;font-weight:600;
+  font-family:var(--mono);letter-spacing:0.05em;
+  transform:translateY(60px);opacity:0;
+  transition:all 0.25s;pointer-events:none;
+}
+#toast.show{transform:none;opacity:1;}
+
+/* ── ANIMATIONS ── */
+.wrap>*{animation:fadeup 0.35s ease both;}
+.wrap>*:nth-child(1){animation-delay:0.05s}
+.wrap>*:nth-child(2){animation-delay:0.1s}
+.wrap>*:nth-child(3){animation-delay:0.15s}
+.wrap>*:nth-child(4){animation-delay:0.2s}
+.wrap>*:nth-child(5){animation-delay:0.25s}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+@media(max-width:480px){
+  .balance-num{font-size:32px;}
+  .code-val{font-size:16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN / AUTH SCREEN
+═══════════════════════════════════════════ -->
+<div class="wrap" id="loginWrap">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">🔐</div>
+      <h2 id="authHeading">Welcome back</h2>
+      <p id="authSub">Sign in to your vault</p>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="viewSignin">
+      <div class="form-field">
+        <label class="form-label">Username</label>
+        <input type="text" id="siUser" placeholder="your_username" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input type="password" id="siPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleSignIn()" />
+      </div>
+      <span class="forgot-link" onclick="toggleAuth('reset')">Forgot password?</span>
+      <button class="primary" onclick="handleSignIn()" style="width:100%;">Access Vault</button>
+      <div class="auth-foot">No account? <span onclick="toggleAuth('signup')">Create one</span></div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="viewSignup" class="hidden">
+      <div class="form-field">
+        <label class="form-label">Username</label>
+        <input type="text" id="suUser" placeholder="choose_username" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input type="email" id="suEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input type="password" id="suPass" placeholder="••••••••" />
+      </div>
+      <button class="primary" onclick="startVerify('signup')" style="width:100%;margin-top:4px;">Register & Verify</button>
+      <div class="auth-foot">Already a member? <span onclick="toggleAuth('signin')">Sign in</span></div>
+    </div>
+
+    <!-- RESET -->
+    <div id="viewReset" class="hidden">
+      <div class="form-field">
+        <label class="form-label">Your Username</label>
+        <input type="text" id="rsUser" placeholder="enter_username" />
+      </div>
+      <button class="primary" onclick="startVerify('reset')" style="width:100%;margin-top:4px;">Send Reset Code</button>
+      <div class="auth-foot"><span onclick="toggleAuth('signin')">← Back to sign in</span></div>
+    </div>
+
+    <!-- OTP -->
+    <div id="viewOTP" class="hidden">
+      <div class="form-field">
+        <label class="form-label" id="otpLbl">6-digit verification code</label>
+        <input type="text" id="otpVal" maxlength="6" placeholder="000000" class="otp-input" />
+      </div>
+      <div id="newPassRow" class="hidden form-field">
+        <label class="form-label">New Password</label>
+        <input type="password" id="newPass" placeholder="••••••••" />
+      </div>
+      <button class="primary" onclick="completeVerify()" style="width:100%;margin-top:4px;">Verify &amp; Continue</button>
+    </div>
+
+    <p class="fb" id="authFB"></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div class="wrap hidden" id="appWrap">
+
+  <!-- header -->
+  <div class="page-header">
+    <div>
+      <div class="sub">Token Vault</div>
+      <h1 id="appTitle">Gateway</h1>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-user" id="userTag">@user</span>
+      <button class="ghost" onclick="logout()" style="padding:5px 12px;font-size:11px;">Sign out</button>
+    </div>
+  </div>
+
+  <!-- wallet -->
+  <div class="card wallet-card">
+    <div class="clabel">Token balance</div>
+    <div class="wallet-inner">
+      <div>
+        <div style="display:flex;align-items:baseline;">
+          <span class="balance-num" id="balanceNum">$0.00</span>
+          <span class="balance-badge" id="balBadge">+$10.00</span>
+        </div>
+        <div class="wallet-sub" id="redeemCount">0 codes redeemed</div>
+      </div>
+      <div class="wallet-icon">🏦</div>
+    </div>
+  </div>
+
+  <!-- generator -->
+  <div class="card">
+    <div class="clabel"><span class="dot" id="genDot"></span>Code generator</div>
+    <div class="code-display">
+      <div class="code-val empty" id="codeDisplay">No code generated yet</div>
+      <button id="copyBtn" onclick="copyCode()" disabled style="padding:5px 10px;font-size:12px;flex-shrink:0;">Copy</button>
+    </div>
+    <div class="timer-row">
+      <span class="timer-num" id="timerNum">—</span>
+      <span class="timer-lbl" id="timerLbl">Idle</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    <div class="btn-row">
+      <button class="primary" onclick="genCode()">Generate 12-digit code</button>
+    </div>
+  </div>
+
+  <!-- redeem -->
+  <div class="card">
+    <div class="clabel">Redeem code</div>
+    <div class="input-wrap">
+      <input type="text" id="redeemInput" maxlength="20" placeholder="Paste or type code…" onkeydown="if(event.key==='Enter')redeemCode()" />
+      <button onclick="redeemCode()">Redeem</button>
+    </div>
+    <p class="fb" id="redeemFB"></p>
+  </div>
+
+  <!-- history -->
+  <div class="card">
+    <div class="clabel">
+      Transaction history
+      <span class="count-pill hidden" id="txPill">0</span>
+    </div>
+    <div class="tx-empty" id="txEmpty">No transactions yet.</div>
+    <div class="tx-list" id="txList"></div>
+  </div>
+
+</div><!-- /appWrap -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+/* ── CONFIG ── */
+const SERVICE_ID   = "service_f82otuq";
+const TEMPLATE_ID  = "template_ghjeh6x";
+const PUBLIC_KEY   = "vRz4Wr73FkMviT8OO";
+const HF_SPACE_URL = "https://yasta23235-tokem.hf.space";
+
+emailjs.init(PUBLIC_KEY);
+
+/* ── STATE ── */
+let currentUser  = null;
+let authMode     = 'signin';
+let pendingData  = null;
+let currentOTP   = null;
+let balance      = 0;
+let totalRedeemed = 0;
+let historyData  = [];
+let activeCode   = null;
+let timerInterval = null;
+let secondsLeft  = 0;
+
+const DURATION = 180;
+const REWARD   = 10;
+
+const MASTER_CODES = [
+  { code:"WELCOME100",    amount:100 },
+  { code:"GOLDEN_TICKET", amount:50  },
+  { code:"FREE25",        amount:25  },
+];
+
+/* ── INIT ── */
+window.onload = () => {
+  const saved = localStorage.getItem('activeSession');
+  if (saved) { loadUser(saved); showApp(); }
+};
+
+/* ── AUTH ── */
+function toggleAuth(mode) {
+  authMode = mode;
+  ['viewSignin','viewSignup','viewReset','viewOTP','newPassRow'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  setFB('authFB','','');
+  const heads = {
+    signin:  ['Welcome back',        'Sign in to your vault'],
+    signup:  ['Create account',      'Join the token vault'],
+    reset:   ['Reset password',      'We will email you a code'],
+    otp:     ['Check your inbox',    'Enter the 6-digit code'],
+  };
+  const [h, s] = heads[mode] || heads.signin;
+  document.getElementById('authHeading').textContent = h;
+  document.getElementById('authSub').textContent     = s;
+  if (mode==='signin') document.getElementById('viewSignin').classList.remove('hidden');
+  if (mode==='signup') document.getElementById('viewSignup').classList.remove('hidden');
+  if (mode==='reset')  document.getElementById('viewReset').classList.remove('hidden');
+  if (mode==='otp')    document.getElementById('viewOTP').classList.remove('hidden');
+}
+
+function handleSignIn() {
+  const user = v('siUser').toLowerCase();
+  const pass = v('siPass');
+  const data = getUser(user);
+  if (data && data.password === pass) {
+    currentUser = user;
+    localStorage.setItem('activeSession', user);
+    loadUser(user);
+    showApp();
+  } else {
+    setFB('authFB','err','Invalid username or password.');
+  }
+}
+
+function startVerify(mode) {
+  let email, user, pass;
+  if (mode === 'signup') {
+    user  = v('suUser').toLowerCase();
+    email = v('suEmail');
+    pass  = v('suPass');
+    if (!user||!email||!pass) return setFB('authFB','err','All fields required.');
+    if (getUser(user)) return setFB('authFB','err','Username already taken.');
+    pendingData = { user, email, pass };
+  } else {
+    user = v('rsUser').toLowerCase();
+    const ex = getUser(user);
+    if (!ex) return setFB('authFB','err','User not found.');
+    email = ex.email;
+    pendingData = { user, email };
+  }
+  currentOTP = Math.floor(100000 + Math.random()*900000).toString();
+  setFB('authFB','ok','Sending code…');
+  emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+    email, to_name:user, otp_code:currentOTP,
+    name:"Gateway Vault", reply_to:"noreply@gateway.app"
+  }).then(() => {
+    toggleAuth('otp');
+    if (mode==='reset') document.getElementById('newPassRow').classList.remove('hidden');
+    setFB('authFB','ok','Code sent! Check your email.');
+  }).catch(() => setFB('authFB','err','Email service error. Try again.'));
+}
+
+function completeVerify() {
+  const entered = v('otpVal');
+  if (entered !== currentOTP) return setFB('authFB','err','Wrong code.');
+  if (authMode==='signup'||authMode==='otp' && pendingData.pass) {
+    const rec = { username:pendingData.user, email:pendingData.email, password:pendingData.pass, balance:0, totalRedeemed:0, history:[] };
+    localStorage.setItem('u_'+pendingData.user, JSON.stringify(rec));
+    currentUser = pendingData.user;
+    localStorage.setItem('activeSession', currentUser);
+    loadUser(currentUser);
+    showApp();
+  } else {
+    const np = v('newPass');
+    if (!np) return setFB('authFB','err','Enter new password.');
+    const d = getUser(pendingData.user);
+    d.password = np;
+    localStorage.setItem('u_'+pendingData.user, JSON.stringify(d));
+    toast('Password updated!');
+    toggleAuth('signin');
+  }
+}
+
+/* ── CORE APP ── */
+function genCode() {
+  clearInterval(timerInterval);
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  activeCode = Array.from({length:12}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  secondsLeft = DURATION;
+  const cd = document.getElementById('codeDisplay');
+  cd.className = 'code-val';
+  cd.textContent = activeCode;
+  document.getElementById('copyBtn').disabled = false;
+  document.getElementById('genDot').className = 'dot on';
+  document.getElementById('timerLbl').textContent = 'Active';
+  tickTimer();
+  timerInterval = setInterval(() => { secondsLeft--; tickTimer(); if(secondsLeft<=0) expireCode(); }, 1000);
+}
+
+function expireCode() {
+  clearInterval(timerInterval);
+  document.getElementById('codeDisplay').className = 'code-val expired';
+  document.getElementById('genDot').className = 'dot off';
+  document.getElementById('copyBtn').disabled = true;
+  document.getElementById('timerLbl').textContent = 'Expired';
+  activeCode = null;
+}
+
+async function redeemCode() {
+  const inp = document.getElementById('redeemInput');
+  const val = inp.value.trim().toUpperCase();
+  if (!val) return;
+  setFB('redeemFB','','Verifying…');
+
+  /* 1. HF cloud bot */
+  try {
+    const r = await fetch(`${HF_SPACE_URL}/check/${val}`);
+    const d = await r.json();
+    if (d.valid) {
+      applyReward(d.amount, val, 'Cloud');
+      setFB('redeemFB','ok',`Cloud verified: +$${d.amount.toFixed(2)}`);
+      inp.value = '';
+      return;
+    }
+  } catch(e) { /* offline */ }
+
+  /* 2. Master codes */
+  const mc = MASTER_CODES.find(m => m.code === val);
+  if (mc) {
+    applyReward(mc.amount, val, 'Master');
+    setFB('redeemFB','ok',`Redeemed: +$${mc.amount.toFixed(2)}`);
+    inp.value = '';
+    return;
+  }
+
+  /* 3. Temp 12-digit */
+  if (activeCode && val === activeCode) {
+    applyReward(REWARD, activeCode, 'Temp');
+    setFB('redeemFB','ok',`Credited: +$${REWARD.toFixed(2)}`);
+    expireCode();
+    inp.value = '';
+    return;
+  }
+
+  setFB('redeemFB','err','Invalid or expired code.');
+  inp.value = '';
+}
+
+function applyReward(amount, code, source) {
+  balance += amount;
+  totalRedeemed++;
+  historyData.unshift({
+    code, amount, source,
+    time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+  });
+  saveUser();
+  animBalance(amount);
+  renderHistory();
+  toast(`+$${amount.toFixed(2)} credited`);
+}
+
+/* ── UI ── */
+function tickTimer() {
+  const pct = (secondsLeft / DURATION) * 100;
+  const m   = Math.floor(secondsLeft/60);
+  const s   = (secondsLeft%60).toString().padStart(2,'0');
+  document.getElementById('timerNum').textContent = `${m}:${s}`;
+  const bar = document.getElementById('barFill');
+  bar.style.width = pct+'%';
+  bar.className = 'bar-fill'+(pct<15?' danger':pct<35?' warn':'');
+}
+
+function animBalance(added) {
+  document.getElementById('balanceNum').textContent = '$'+balance.toFixed(2);
+  document.getElementById('balanceNum').classList.add('pop');
+  setTimeout(()=>document.getElementById('balanceNum').classList.remove('pop'),420);
+  const badge = document.getElementById('balBadge');
+  badge.textContent = '+$'+added.toFixed(2);
+  badge.classList.add('show');
+  setTimeout(()=>badge.classList.remove('show'),1800);
+  document.getElementById('redeemCount').textContent = totalRedeemed+' codes redeemed';
+}
+
+function renderHistory() {
+  const list = document.getElementById('txList');
+  list.innerHTML = '';
+  if (!historyData.length) return;
+  document.getElementById('txEmpty').style.display = 'none';
+  document.getElementById('txPill').classList.remove('hidden');
+  document.getElementById('txPill').textContent = totalRedeemed;
+  historyData.forEach(tx => {
+    const el = document.createElement('div');
+    el.className = 'tx-item';
+    el.innerHTML = `
+      <div>
+        <div class="tx-name">Code redeemed<span class="tx-badge">${tx.source||'—'}</span></div>
+        <div class="tx-code">${tx.code}</div>
+      </div>
+      <div>
+        <div class="tx-amt">+$${tx.amount.toFixed(2)}</div>
+        <div class="tx-time">${tx.time}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+function copyCode() {
+  if (!activeCode) return;
+  navigator.clipboard.writeText(activeCode).then(()=>{
+    const b = document.getElementById('copyBtn');
+    b.textContent='Copied!';
+    setTimeout(()=>b.textContent='Copy',1500);
+  });
+}
+
+/* ── PERSISTENCE ── */
+function getUser(u) { return JSON.parse(localStorage.getItem('u_'+u)); }
+function saveUser() {
+  if (!currentUser) return;
+  const d = getUser(currentUser)||{};
+  d.balance = balance; d.totalRedeemed = totalRedeemed; d.history = historyData;
+  localStorage.setItem('u_'+currentUser, JSON.stringify(d));
+}
+function loadUser(username) {
+  const d = getUser(username);
+  if (!d) return;
+  balance        = d.balance||0;
+  totalRedeemed  = d.totalRedeemed||0;
+  historyData    = d.history||[];
+  currentUser    = username;
+  document.getElementById('userTag').textContent = '@'+username;
+  document.getElementById('balanceNum').textContent = '$'+balance.toFixed(2);
+  document.getElementById('redeemCount').textContent = totalRedeemed+' codes redeemed';
+  renderHistory();
+}
+
+/* ── APP FLOW ── */
+function showApp() {
+  document.getElementById('loginWrap').classList.add('hidden');
+  document.getElementById('appWrap').classList.remove('hidden');
+}
+function logout() {
+  localStorage.removeItem('activeSession');
+  location.reload();
+}
+
+/* ── HELPERS ── */
+function v(id){ return document.getElementById(id).value.trim(); }
+function setFB(id, cls, msg) {
+  const el = document.getElementById(id);
+  el.className = 'fb'+(cls?' '+cls:'');
+  el.textContent = msg;
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'),2400);
+}
+</script>
+</body>
+</html>
